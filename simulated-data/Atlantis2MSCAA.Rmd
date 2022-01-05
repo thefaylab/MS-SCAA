@@ -52,7 +52,7 @@ The time series have already been dimensioned in the mskeyrun R data package, so
 
 #### Multispecies statistical catch at age model, MSCAA
 
-Similar to Hydra, MSCAA requires .dat and .pin files as inputs. Kiersten's file `[9Species_Input_MspModel.R](https://github.com/thefaylab/MS-SCAA/blob/master/9Species/R.programs.Inputs/9Species_Input_MspModel.R)` outlines the steps for creating these files and is used here as much as possible.
+Similar to Hydra, MSCAA requires .dat and .pin files as inputs. Kiersten's file `[9Species_Input_MspModel.R](https://github.com/thefaylab/MS-SCAA/blob/master/9Species/R.programs.Inputs/9Species_Input_MspModel.R)` outlines the steps for creating these files and is used as a basis here as much as possible.
 
 An important note for MSCAA is that the ragged arrays of age compositions require that the species order be from most to least age classes.
 
@@ -105,8 +105,88 @@ FH.fyr<-min(mskeyrun::simSurveyDietcomp$year)
 FH.lyr<-max(mskeyrun::simSurveyDietcomp$year)
 binsize <- 5
 
+```
 
+Contstants to be left alone
 
+```{r}
+
+# Ecosystem biomass
+eco.b = 15;                        ##Original units = million metric tons
+eco.b = eco.b*1000;           ##Units = 10^6 kg;  Conversion:  million metric tons * 1e6(=million) * 1000(kg=metric ton) / 1e6(=million)
+
+# Constants
+eof <- 54321
+o.constant <- 1e-3
+p.constant <- 1e-30
+
+# Phases: 
+aAge1.ph <- rep(1,nsp)
+  names(aAge1.ph) <- sp.names
+  aAge1.ph[length.struct.sp] <- -1
+aFt.ph <- aAge1.ph
+dAge1.ph <- aAge1.ph
+  dAge1.ph[dAge1.ph>0] <- 1 # 3,1 
+dFt.ph <- dAge1.ph
+Yr1.ph <- aAge1.ph
+  Yr1.ph[Yr1.ph>0] <- 1 # 2,1 
+fic.ph <- aAge1.ph
+  fic.ph[fic.ph>0] <- 1 # 4,1
+fish.ph <- fic.ph
+
+```
+
+Identifying species interactions is done similarly to the predprey matrix in hydra, but using the`mskeyrun::simSurveyDietcomp` data. This code keeps all pred-prey interactions among the species no matter how small.
+
+```{r}
+
+predprey <- mskeyrun::simSurveyDietcomp %>%
+  filter(prey %in% unique(Name)) %>%
+  select(Name, agecl, year, prey, value) %>%
+  group_by(Name, prey) %>%
+  summarise(avgpreyprop = mean(value)) %>%
+  unite('Pred-Prey', Name:prey, sep = "-")
+
+int.names <- as.vector(predprey$`Pred-Prey`)
+
+# int.names <- c( #'Pred-Prey'
+#       'Cod-Cod', # high stdev
+#       'Cod-SH',
+#       'Cod-Her',
+#       'Cod-Mack',   # high stdev   
+#       # 'Cod-WH',  #???    
+# 
+#       'SH-SH',
+#       'SH-Her',
+#       'SH-Mack', #???
+# 
+#       ## 'Goose-SDog',  #???
+#       'Goose-Cod',
+#       'Goose-SH', 
+#       'Goose-Her',
+#       'Goose-Mack', 
+#       ## ?Goose-Goose?, #???
+# 
+#       # 'WH-WH', 
+#        'WH-SH',
+#        'WH-Her', 
+#       # 'WH-Mack', #??? # high stdev
+#  
+#       # 'Pol-Mack', #???
+#        'Pol-SH',
+#        'Pol-Her', 
+# 
+#       'SDog-SH', 
+#       'SDog-Her',
+#       'SDog-Mack', 
+#       'SDog-Cod', 
+#       # 'SDog-Goose', #???
+# 
+#        'WSk-SH', 
+#        'WSk-Her'
+#       # 'WSk-Mack'
+# )
+#print('Remember to modify species interactions if necessary')
 ```
 
 
