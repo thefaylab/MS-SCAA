@@ -189,6 +189,59 @@ int.names <- as.vector(predprey$`Pred-Prey`)
 #print('Remember to modify species interactions if necessary')
 ```
 
+The next step is reading in single species model outputs to initialize the multispeces model. We need to think about whether we want to simulate this whole process, and if not, how best to initialize the multispecies model. Or perhaps it is the same input data no matter what.
+
+Things to confirm for generating data:
+
+1. MS-SCAA fits to only one survey index per year for each species? 
+    +  If so pick fall simulated data to include NOBA mackerel. Note that each survey gets different ages of NOBA blue whiting.
+    +  If not how to input multiple survey time series? also different recruitment-to-survey parameters for each
+    
+2. Single fishing fleet per species? I think correct but if not, same questions as above
+
+
+Some default assumptions matching the current 9species and appropriate for simulated data as well to go directly into dat file:
+
+```{r}
+# Number of segments of different natural mortality (M1) rates, called nMseg in tpl, Mnseg in dat, M1nseg in singlespp
+Mnseg <- 1 
+
+# Number of segments for the FIC data; for each segment, a separate q is estimated. call all one survey, therefore 1
+Nseg <- rep(1, nsp) 
+
+# First age when partially recruited to the fishery; used to avoid hitting parameter bounds
+agePR <- 
+  
+# Age of full recruitment to the fishery
+ageFR <- 
+  
+# Age of full recruitment to the fishery-independent survey, FIC
+    # ficFR == 0 for species that never become fully recruited to the survey
+    # All NOBA species have age 1 in first dataset, to be safe pull from age dat:
+ficFR <- mskeyrun::simSurveyAgecomp %>%
+  select(Name, survey, age) %>%
+  group_by(Name, survey) %>%
+  summarise(minage = min(age)) %>%
+  pivot_wider(names_from = survey, values_from = minage) %>%
+  arrange(Name=sp.names)
+  
+# Survey selectivity coefficient for the last age class; used to anchor the curve
+  # FICs_lage == 1 for species that become fully recruited to the survey
+FICs_lage <- rep(1, nsp)
+  
+```
+
+Peek at a single species rep file for structure:
+
+```{r}
+reptoRlist<-dget(here("9species/R.functions/reptoRlist.R"))
+
+Cod.rep<-reptoRlist(here("Single.Species/Cod.Run119/Cod.rep"))
+Cod.rep$ofv
+Cod.rep$M1.1
+```
+
+Since the multispecies simulated data is already together in mskeyrun, I may bypass this step for now and build a .dat file directly.
 
 #### Length-structured multispecies model (Hydra)
 
