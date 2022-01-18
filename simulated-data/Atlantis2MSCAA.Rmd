@@ -193,12 +193,18 @@ The next step is reading in single species model outputs to initialize the multi
 
 Things to confirm for generating data:
 
-1. MS-SCAA fits to only one survey index per year for each species? 
+1. MS-SCAA fits to only one survey index per year for each species?  *No!* there are multiple surveys--get number below
     +  If so pick fall simulated data to include NOBA mackerel. Note that each survey gets different ages of NOBA blue whiting.
     +  If not how to input multiple survey time series? also different recruitment-to-survey parameters for each
     
+```{r}
+#Number of trawl survey datasets
+nFIC <- length(unique(mskeyrun::simSurveyIndex$survey)) #WARNING not safe for multiple surveys in the dataset
+```
+    
+While there are multiple surveys, the survey age at first recruitment is dimensioned only per species, not survey, so if they are different we will need to make a decision which survey data to use. In the initial dataset there is no survey selectivity so they are the same anyway.
+    
 2. Single fishing fleet per species? I think correct but if not, same questions as above
-
 
 Some default assumptions matching the current 9species and appropriate for simulated data as well to go directly into dat file:
 
@@ -210,10 +216,16 @@ Mnseg <- 1
 Nseg <- rep(1, nsp) 
 
 # First age when partially recruited to the fishery; used to avoid hitting parameter bounds
-agePR <- 
+agePR <- rep(1, nsp) # placeholder, use below to estimate full rec - 1 or -2?
   
 # Age of full recruitment to the fishery
-ageFR <- 
+ageFR <- mskeyrun::simFisheryAgecomp %>%
+  select(Name, fishery, age) %>%
+  group_by(Name, fishery) %>%
+  summarise(minage = min(age)) %>%
+  pivot_wider(names_from = fishery, values_from = minage) %>%
+  arrange(factor(Name, levels =sp.names)) %>%
+  ungroup()
   
 # Age of full recruitment to the fishery-independent survey, FIC
     # ficFR == 0 for species that never become fully recruited to the survey
@@ -223,7 +235,7 @@ ficFR <- mskeyrun::simSurveyAgecomp %>%
   group_by(Name, survey) %>%
   summarise(minage = min(age)) %>%
   pivot_wider(names_from = survey, values_from = minage) %>%
-  arrange(Name=sp.names)
+  arrange(factor(Name, levels =sp.names))
   
 # Survey selectivity coefficient for the last age class; used to anchor the curve
   # FICs_lage == 1 for species that become fully recruited to the survey
