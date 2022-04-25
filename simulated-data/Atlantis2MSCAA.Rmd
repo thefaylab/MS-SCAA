@@ -84,8 +84,8 @@ mod.sp.names <- sp.names
 # ID'g which species had length structured ssp runs (bc inputs differ)
 length.struct <- rep(0,length(sp.names))
   names(length.struct) <- sp.names
-#length.struct[c('SDog','WSk')] <- 1
-#length.struct.sp <- names(length.struct[length.struct==1])
+#length.struct[c('SDog','WSk')] <- 1  # all sim species are age structured; could change
+length.struct.sp <- names(length.struct[length.struct==1])
 
 ```
 
@@ -254,6 +254,170 @@ Cod.rep$M1.1
 ```
 
 Since the multispecies simulated data is already together in mskeyrun, I may bypass this step for now and build a .dat file directly.
+
+Kiersten's workflow below for reference
+```{r, eval=FALSE}
+# Organize data for each individual species into lists
+source("C:\\My_Programs\\R\\9Species Model\\Input Files\\Organize_Individ_SpData.R")
+
+# Organize food habits data
+source("C:\\My_Programs\\R\\9Species Model\\Input Files\\Organize_FH_Data.R")
+
+# Concatenate size preference parameters;  Size preference parameters were initially estimated in SAS
+source("C:\\My_Programs\\R\\9Species Model\\Input Files\\Concatenate_SizePref_Parameters.R")
+
+# Modify FH data to remove any observed %Wts representing species interactions that are not explicitly modeled
+source("C:\\My_Programs\\R\\9Species Model\\Input Files\\Modify_Sp9_FH_ForSpInts.R")
+
+# Import consumption estimates; Modify to accomodate low sample sizes; Consumption estimates were initially estimated in SAS
+source("C:\\My_Programs\\R\\9Species Model\\Input Files\\Import_Modify_Consumption_Rates.R")
+
+# Organize consumption estimates
+source("C:\\My_Programs\\R\\9Species Model\\Input Files\\Organize_Consumption_Estimates.R")
+
+# Rho
+#  Initial parameter estimates
+iRho <- rep(1,nint)
+# Phase
+Rho.ph <- rep(1,nint)# rep(1,nint) # 
+
+# Obj fx weights for FH components
+Owt <- 10
+FHwt <- rep(10,length(sp.order))
+  names(FHwt) <- names(sp.order)
+
+
+ssp.CPwt[['Her']] <- 3
+
+ssp.SPwt[['Mack']][1] <- 5
+ssp.SPwt[['Her']][1] <- 10
+
+# Create list for dat file
+source("C:\\My_Programs\\R\\9Species Model\\Input Files\\Create_DatFile_List.R")
+# Create list for pin file
+source("C:\\My_Programs\\R\\9Species Model\\Input Files\\Create_PinFile_List.R")
+# Create modified list for pin file (using the estimates that went *into* the ssp runs
+source("C:\\My_Programs\\R\\9Species Model\\Input Files\\Create_PinFile_With.SSPInputs.R")
+
+# Write dat and pin files
+setwd(sp9.dir)
+Kdat_write("9Species",Sp9.dat)
+Kpin_write("9Species",Sp9.pin)
+# Kpin_write("9Species",Sp9.SSp.pin)
+
+```
+
+Try going straight to Create_DatFile_List.R
+
+```{r}
+Run <- c("Test NOBA")
+
+# Rho
+#  Initial parameter estimates
+iRho <- rep(1,nint)
+# Phase
+Rho.ph <- rep(1,nint)# rep(1,nint) # 
+
+# Obj fx weights for FH components
+Owt <- 10
+FHwt <- rep(10,length(sp.order))
+  names(FHwt) <- names(sp.order)
+
+
+##########################################
+#Organizes food habits data for input into msp model
+###########################################
+
+
+# Organize species interactions; Determine pred, prey and nint
+
+split.ints <- strsplit(int.names,"-")
+pred.names <- unlist(lapply(split.ints,function(x){x[1]}))
+prey.names <- unlist(lapply(split.ints,function(x){x[2]}))
+
+pred <- sp.order[pred.names]
+prey <- sp.order[prey.names]
+nint<-length(pred)
+
+
+  
+  
+Sp9.dat <- c(
+  list (
+    Run = Run,
+    Simulation = 1,
+    Trophic = 1,
+    nsp = nsp,
+    nFIC = nFIC.num,
+    o = o.constant,
+    p = p.constant,
+    Nint = nint,
+    Binsize = binsize,
+    EcoB.mil.kg = eco.b,
+    Owt = Owt,
+    Fyr=fyr, Lyr=lyr,
+    FHfyr=FH.fyr,FHlyr=FH.lyr,
+    Nage = Nage, #unlist(ssp.nage),
+    Mnseg = M1nseg.num, 
+    Nseg = Nseg, #unlist(ssp.FICnseg),
+    agePR = agePR, #unlist(ssp.agePR),
+    ageFR = as.vector(t(ageFR[,-1])), #unlist(ssp.ageFR),
+    ficFR = #unlist(ssp.ficFR),
+    FICs_lage = FICs_lage, #unlist(ssp.FICs.lage),
+
+    aAge1ph = aAge1.ph,
+    aFtph = aFt.ph,
+    dAge1ph = dAge1.ph,
+    dFtph = dFt.ph,
+    ficph = fic.ph,
+    fishph = fish.ph,
+    Yr1ph = Yr1.ph,  
+
+    Pred = pred,
+    Prey = prey,
+    Rhoph = Rho.ph,
+    M1yr = M1yr.num,
+    TCwt = unlist(ssp.TCwt),
+    CPwt = unlist(ssp.CPwt),
+    Bwt = unlist(ssp.Bwt),
+    Ywt = unlist(ssp.Ywt),
+    Rwt = unlist(ssp.Rwt),
+    FHwt = FHwt,
+    Bthres = unlist(ssp.Bthres),
+    Rthres = unlist(ssp.Rthres),
+    TSwt = do.call(rbind,ssp.TSwt),
+    SPwt = do.call(rbind,ssp.SPwt),
+    iM2 = rep(0,sum(unlist(ssp.nage))),
+    Eta = Eta,
+    Sigma1 = Sig1.out,
+    Sigma2 = Sig2.out,
+    fic_fage = do.call(rbind,ssp.FICfage),
+    fic_lage = do.call(rbind,ssp.FIClage),
+    FICmonth = do.call(rbind,ssp.FICmon),
+    FICyr = unlist(ssp.FICyr)
+  ),
+
+  TotC.tmt = ssp.TotC,
+  WeightAtAge.kg=ssp.Wt,
+  CatchAtAge.mil = ssp.CAA,
+  TotFIC = ssp.TotFIC, 
+  M1 = Sp9.M1seg,
+  CBratio = CB.list,
+
+   FIC.SDog.1  = lapply(ssp.FIC[[1]],as.matrix),
+   FIC.WSk.2   = lapply(ssp.FIC[[2]],as.matrix), 
+   FIC.Goose.3 = lapply(ssp.FIC[[3]],as.matrix), 
+   FIC.Cod.4    = lapply(ssp.FIC[[4]],as.matrix),
+   FIC.Mack.5 = lapply(ssp.FIC[[5]],as.matrix),  
+   FIC.Pol.6     = lapply(ssp.FIC[[6]],as.matrix), 
+   FIC.WH.7   = lapply(ssp.FIC[[7]],as.matrix),    
+   FIC.SH.8    = lapply(ssp.FIC[[8]],as.matrix), 
+   FIC.Her.9   = lapply(ssp.FIC[[9]],as.matrix),  
+  FH = Sp9.ModFH.list,
+  Eof = list(eof)
+ )
+
+```
 
 #### Length-structured multispecies model (Hydra)
 
