@@ -339,8 +339,53 @@ pred <- sp.order[pred.names]
 prey <- sp.order[prey.names]
 nint<-length(pred)
 
+## Make the observed data ##
 
+## List structure by species
+
+list.bysp <- vector('list',nsp)
+  names(list.bysp) <- sp.names
   
+seasons <- c('Spring','Fall')
+list.bysp.season <- lapply(list.bysp,function(x){
+                                     x<-vector('list',length(seasons))
+                                     names(x) <- seasons
+                                     x  })
+
+ssp.CAA <- list.bysp
+ssp.pred.cprop <- list.bysp
+ssp.N <- list.bysp
+ssp.Wt <- list.bysp
+ssp.TotC <- list.bysp
+ssp.TotFIC <- list.bysp
+ssp.M1seg <- list.bysp
+
+ssp.FIC <- list.bysp.season
+ssp.pred.sprop <- list.bysp.season
+
+## read in NOBA data to structures
+
+# handy function see https://github.com/tidyverse/dplyr/issues/4223#issuecomment-469269857
+named_group_split <- function(.tbl, ...) {
+  grouped <- group_by(.tbl, ...)
+  names <- rlang::inject(paste(!!!group_keys(grouped), sep = " / "))
+
+  grouped %>% 
+    group_split() %>% 
+    rlang::set_names(names)
+}
+
+# total catch, vector for each species
+TotClist <- named_group_split(mskeyrun::simCatchIndex %>% select(Name, year, value), Name) %>%
+  map("value")
+# need to order by sp.order
+
+# weight at age, years in rows, ages in columns
+
+
+
+
+## make the dat list
   
 Sp9.dat <- c(
   list (
