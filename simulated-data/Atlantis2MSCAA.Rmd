@@ -376,9 +376,12 @@ named_group_split <- function(.tbl, ...) {
 }
 
 # total catch, vector for each species
-TotClist <- named_group_split(mskeyrun::simCatchIndex %>% select(Name, year, value), Name) %>%
+TotClist <- named_group_split(mskeyrun::simCatchIndex %>% 
+                                filter(variable=="catch") %>% 
+                                select(Name, year, value), Name) %>%
   map("value")
 # need to order by sp.order
+ ssp.TotC  <-  TotClist[names(ssp.TotC)]
 
 # weight at age, years in rows, ages in columns
 
