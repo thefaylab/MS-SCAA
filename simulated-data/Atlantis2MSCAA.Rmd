@@ -312,18 +312,6 @@ Try going straight to Create_DatFile_List.R
 ```{r}
 Run <- c("Test NOBA")
 
-# Rho
-#  Initial parameter estimates
-iRho <- rep(1,nint)
-# Phase
-Rho.ph <- rep(1,nint)# rep(1,nint) # 
-
-# Obj fx weights for FH components
-Owt <- 10
-FHwt <- rep(10,length(sp.order))
-  names(FHwt) <- names(sp.order)
-
-
 ##########################################
 #Organizes food habits data for input into msp model
 ###########################################
@@ -338,6 +326,18 @@ prey.names <- unlist(lapply(split.ints,function(x){x[2]}))
 pred <- sp.order[pred.names]
 prey <- sp.order[prey.names]
 nint<-length(pred)
+
+# Rho
+#  Initial parameter estimates
+iRho <- rep(1,nint)
+# Phase
+Rho.ph <- rep(1,nint)# rep(1,nint) # 
+
+# Obj fx weights for FH components
+Owt <- 10
+FHwt <- rep(10,length(sp.order))
+  names(FHwt) <- names(sp.order)
+
 
 ## Make the observed data ##
 
