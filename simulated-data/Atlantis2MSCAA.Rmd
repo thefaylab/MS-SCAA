@@ -316,7 +316,6 @@ Run <- c("Test NOBA")
 #Organizes food habits data for input into msp model
 ###########################################
 
-
 # Organize species interactions; Determine pred, prey and nint
 
 split.ints <- strsplit(int.names,"-")
@@ -337,7 +336,6 @@ Rho.ph <- rep(1,nint)# rep(1,nint) #
 Owt <- 10
 FHwt <- rep(10,length(sp.order))
   names(FHwt) <- names(sp.order)
-
 
 ## Make the observed data ##
 
@@ -368,22 +366,91 @@ ssp.pred.sprop <- list.bysp.season
 # handy function see https://github.com/tidyverse/dplyr/issues/4223#issuecomment-469269857
 named_group_split <- function(.tbl, ...) {
   grouped <- group_by(.tbl, ...)
-  names <- rlang::inject(paste(!!!group_keys(grouped), sep = " / "))
-
+  #names <- rlang::inject(paste(!!!group_keys(grouped), sep = " / "))
+  names <- rlang::inject(paste(!!!group_keys(grouped), sep = "$"))
+  
   grouped %>% 
     group_split() %>% 
     rlang::set_names(names)
 }
 
-# total catch, vector for each species
+# total catch, vector for each species (thousand ? tons)
 TotClist <- named_group_split(mskeyrun::simCatchIndex %>% 
                                 filter(variable=="catch") %>% 
+                                mutate(value = value/1000) %>%
                                 select(Name, year, value), Name) %>%
   map("value")
 # need to order by sp.order
  ssp.TotC  <-  TotClist[names(ssp.TotC)]
+ 
+# WT AGE INTERPOLATION BREAKS FOR FIRST FISHERY AGE IF NOT AGE 1 
+# fix bug in atlantisom
+ 
+# fishery weight at age (kg), years in rows, ages in columns
+sspWtlist <- named_group_split(mskeyrun::simFisheryWtatAge %>% 
+                                filter(variable=="Wtage") %>% 
+                                mutate(value = value/1000) %>%
+                                select(Name, year, value), Name) %>%
+  map("value")
+ 
+ 
+# calculate expansion factor for CAA from sample
+# weight at age times number sampled at age
+fishwtagesamp <- mskeyrun::simFisheryAgecomp %>%
+  dplyr::mutate(Natage = value) %>%
+  dplyr::select(-variable, -value, -units) %>%
+  dplyr::left_join(mskeyrun::simFisheryWtatAge) %>%
+  dplyr::mutate(Wtage = value) %>%
+  dplyr::select(-variable, -value, -units) %>%
+  dplyr::mutate(wtagesamp_g = Wtage*Natage) %>%
+  dplyr::group_by(ModSim, year, Code, Name, fishery) %>%
+  dplyr::mutate(sumsamp_g = sum(wtagesamp_g),
+                propsampwt = wtagesamp_g/sumsamp_g)
 
-# weight at age, years in rows, ages in columns
+fishtotc <- mskeyrun::simCatchIndex %>%
+  dplyr::filter(variable == "catch") %>%
+  dplyr::mutate(catch = value) %>%
+  dplyr::select(-variable, -value, -units)
+
+# SOLVED: DIAGNOSE WHY FISHERY AGE SAMPLE ONE YEAR EARLIER THAN TOTAL CATCH
+# Fixed in mskeyrun dataset June 9 2022
+# total catch from Catch.txt, includes 0 year
+# Natage in catch from ANNAGECATCH.nc
+# also mismatches lengths derived from CATCH.nc, same direction
+fishCAAest <- fishwtagesamp %>%
+  left_join(fishtotc)
+
+
+# sum sampled weight
+# catch numbers at age (millions)
+sspCAAlist <- named_group_split(mskeyrun::simFisheryAgecomp %>% 
+                                filter(variable=="Natage") %>% 
+                                #mutate(value = value/1000000) %>%
+                                select(Name, year, value), Name) %>%
+  map("value")
+
+ 
+ 
+# total FIC is two vectors 
+ 
+ 
+ 
+ 
+# seasonal structure is different, season is one more list object down 
+ # but writes to dat file as two vectors without season header
+ 
+# MSCAA doesn't use biomass based index, uses numbers based so sum FIC CAA instead
+ # this does work though to split the surveys into species and season list objects
+# surveys, vector for each species and season
+sspFICblist <- named_group_split(mskeyrun::simSurveyIndex %>% 
+                                mutate(season = case_when(survey == "BTS_fall_allbox_effic1" ~ "Fall",
+                                                          survey == "BTS_spring_allbox_effic1" ~ "Spring")) %>%
+                                filter(variable=="biomass") %>% 
+                                select(Name, season, year, value), Name, season) %>%
+  map("value") 
+
+
+
 
 
 
@@ -433,7 +500,7 @@ Sp9.dat <- c(
     FHwt = FHwt,
     Bthres = unlist(ssp.Bthres),
     Rthres = unlist(ssp.Rthres),
-    TSwt = do.call(rbind,ssp.TSwt),
+    TSwt = do.call(rbind,ssp.TSwt), # weights for survey, weights at 0 if not used
     SPwt = do.call(rbind,ssp.SPwt),
     iM2 = rep(0,sum(unlist(ssp.nage))),
     Eta = Eta,
@@ -445,13 +512,14 @@ Sp9.dat <- c(
     FICyr = unlist(ssp.FICyr)
   ),
 
-  TotC.tmt = ssp.TotC,
-  WeightAtAge.kg=ssp.Wt,
-  CatchAtAge.mil = ssp.CAA,
-  TotFIC = ssp.TotFIC, 
-  M1 = Sp9.M1seg,
-  CBratio = CB.list,
+  TotC.tmt = ssp.TotC,  # thousands metric tons fishery catch
+  WeightAtAge.kg=ssp.Wt, # fishery catch weight at age or survey? start with fishery
+  CatchAtAge.mil = ssp.CAA, # fishery catch at age millions
+  TotFIC = ssp.TotFIC, # survey index spring and fall surveys summed over N at age NOT a biomass index
+  M1 = Sp9.M1seg, # outside the model mort by age
+  CBratio = CB.list, # consumption to biomass ratio
 
+  # survey catch at age number/tow
    FIC.SDog.1  = lapply(ssp.FIC[[1]],as.matrix),
    FIC.WSk.2   = lapply(ssp.FIC[[2]],as.matrix), 
    FIC.Goose.3 = lapply(ssp.FIC[[3]],as.matrix), 
@@ -461,7 +529,7 @@ Sp9.dat <- c(
    FIC.WH.7   = lapply(ssp.FIC[[7]],as.matrix),    
    FIC.SH.8    = lapply(ssp.FIC[[8]],as.matrix), 
    FIC.Her.9   = lapply(ssp.FIC[[9]],as.matrix),  
-  FH = Sp9.ModFH.list,
+  FH = Sp9.ModFH.list, #nbins year blocks, 
   Eof = list(eof)
  )
 
