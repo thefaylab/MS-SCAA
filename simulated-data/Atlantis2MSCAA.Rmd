@@ -384,7 +384,7 @@ TotClist <- named_group_split(mskeyrun::simCatchIndex %>%
  ssp.TotC  <-  TotClist[names(ssp.TotC)]
  
 # WT AGE INTERPOLATION BREAKS FOR FIRST FISHERY AGE IF NOT AGE 1 
-# fix bug in atlantisom
+# fix bug in atlantisom--done and mskeyrun updated
  
 # fishery weight at age (kg), years in rows, ages in columns
 sspWtlist <- named_group_split(mskeyrun::simFisheryWtatAge %>% 
