@@ -107,7 +107,7 @@ binsize <- 5
 
 ```
 
-Contstants to be left alone
+Constants to be left alone
 
 ```{r}
 
@@ -417,9 +417,32 @@ fishtotc <- mskeyrun::simCatchIndex %>%
 # total catch from Catch.txt, includes 0 year
 # Natage in catch from ANNAGECATCH.nc
 # also mismatches lengths derived from CATCH.nc, same direction
-fishCAAest <- fishwtagesamp %>%
-  left_join(fishtotc)
 
+# July 2022
+# NEXT PROBLEM: annagecatch.nc and catch.nc have different age classes caught
+# annagecatch.nc has all age classes of North_atl_cod in the catch
+# catch.nc does not have age classes 1 and 2 (annual age 1-4)
+# weight at age extrapolation is based on wt at age derived from catch.nc
+# so fishery weight at age file is missing wt at age for ages present in annagecatch
+# This is an Atlantis output comparison problem and nothing I can fix
+# For our purposes, I will use the weight at age from surveys for missing catch weight at age
+fishCAAest <- fishwtagesamp %>%
+  dplyr::left_join(fishtotc)
+
+# testing
+# problem is only cod
+# fishCAAest %>% filter(is.na(Wtage)) %>% ungroup() %>% select(Name) %>% distinct()
+# but it is all years
+# fishCAAest %>% filter(is.na(Wtage)) %>% ungroup() %>% select(year) %>% distinct()
+
+fishCAAestfix <- fishCAAest %>%
+  dplyr::filter(is.na(Wtage)) %>%
+  dplyr::left_join(mskeyrun::simSurveyWtatAge) %>%
+  dplyr::select(-units) %>%
+  tidyr::pivot_wider(names_from = c("survey", "variable"), values_from = "value") %>%
+  dplyr::ungroup()%>%
+  dplyr::mutate(meanSvWtage =  select(., tail(names(.), 2)) %>% 
+                         pmap(~ mean(c(...))) %>% unlist())
 
 # sum sampled weight
 # catch numbers at age (millions)
