@@ -1,0 +1,19 @@
+---
+title: "MS-SCAA development docs"
+output: html_document
+---
+
+ 
+<button>
+    <a href="https://github.com/thefaylab/MS_SCAA"> MS-SCAA Forked Repo </a>
+</button>
+
+ <!-- ADD LINKS BELOW, note, using the RMD link syntax will open the presentation in the same tab, which is annoying. Use the html with the "_blank" to fix that behavior -->
+ 
+
+## Simulated data inputs
+
+<a href="https://thefaylab.github.io/MS-SCAA/Atlantis2MSCAA.html" target="_blank"> Code to make MS-SCAA inputs from Atlantis-simulated data, July 2022 </a>
+
+
+
