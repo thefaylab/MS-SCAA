@@ -467,7 +467,7 @@ pre code {
 <h1 class="title toc-ignore">Extended from WGSAM Skill Assessment
 Project Page</h1>
 <h4 class="author">Sarah Gaichas, Kiersten Curti, Gavin Fay</h4>
-<h4 class="date">14 July, 2022</h4>
+<h4 class="date">21 July, 2022</h4>
 
 </div>
 
@@ -919,6 +919,14 @@ fishwtagesamp &lt;- mskeyrun::simFisheryAgecomp %&gt;%
   dplyr::left_join(mskeyrun::simFisheryWtatAge) %&gt;%
   dplyr::mutate(Wtage = value) %&gt;%
   dplyr::select(-variable, -value, -units) %&gt;%
+  # fill missing wtages with average survey wtage, otherwise keep fishery wtage
+  dplyr::left_join(mskeyrun::simSurveyWtatAge) %&gt;%
+  dplyr::select(-units) %&gt;%
+  tidyr::pivot_wider(names_from = c(&quot;survey&quot;, &quot;variable&quot;), values_from = &quot;value&quot;) %&gt;%
+  dplyr::ungroup()%&gt;%
+  dplyr::mutate(meanSvWtage =  select(., tail(names(.), 2)) %&gt;% 
+                         pmap(~ mean(c(...))) %&gt;% unlist()) %&gt;%
+  dplyr::mutate(Wtage = ifelse(is.na(Wtage), meanSvWtage, Wtage)) %&gt;%
   dplyr::mutate(wtagesamp_g = Wtage*Natage) %&gt;%
   dplyr::group_by(ModSim, year, Code, Name, fishery) %&gt;%
   dplyr::mutate(sumsamp_g = sum(wtagesamp_g),
@@ -952,14 +960,17 @@ fishCAAest &lt;- fishwtagesamp %&gt;%
 # but it is all years
 # fishCAAest %&gt;% filter(is.na(Wtage)) %&gt;% ungroup() %&gt;% select(year) %&gt;% distinct()
 
-fishCAAestfix &lt;- fishCAAest %&gt;%
-  dplyr::filter(is.na(Wtage)) %&gt;%
-  dplyr::left_join(mskeyrun::simSurveyWtatAge) %&gt;%
-  dplyr::select(-units) %&gt;%
-  tidyr::pivot_wider(names_from = c(&quot;survey&quot;, &quot;variable&quot;), values_from = &quot;value&quot;) %&gt;%
-  dplyr::ungroup()%&gt;%
-  dplyr::mutate(meanSvWtage =  select(., tail(names(.), 2)) %&gt;% 
-                         pmap(~ mean(c(...))) %&gt;% unlist())
+# # this works so integrating above
+# fishCAAestfix &lt;- fishCAAest %&gt;%
+#   dplyr::filter(is.na(Wtage)) %&gt;%
+#   dplyr::left_join(mskeyrun::simSurveyWtatAge) %&gt;%
+#   dplyr::select(-units) %&gt;%
+#   tidyr::pivot_wider(names_from = c(&quot;survey&quot;, &quot;variable&quot;), values_from = &quot;value&quot;) %&gt;%
+#   dplyr::ungroup()%&gt;%
+#   dplyr::mutate(meanSvWtage =  select(., tail(names(.), 2)) %&gt;% 
+#                          pmap(~ mean(c(...))) %&gt;% unlist()) %&gt;%
+#   dplyr::mutate(Wtage = meanSvWtage,
+#                 wtagesamp_g = Wtage*Natage)
 
 # sum sampled weight
 # catch numbers at age (millions)

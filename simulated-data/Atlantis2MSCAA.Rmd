@@ -402,6 +402,14 @@ fishwtagesamp <- mskeyrun::simFisheryAgecomp %>%
   dplyr::left_join(mskeyrun::simFisheryWtatAge) %>%
   dplyr::mutate(Wtage = value) %>%
   dplyr::select(-variable, -value, -units) %>%
+  # fill missing wtages with average survey wtage, otherwise keep fishery wtage
+  dplyr::left_join(mskeyrun::simSurveyWtatAge) %>%
+  dplyr::select(-units) %>%
+  tidyr::pivot_wider(names_from = c("survey", "variable"), values_from = "value") %>%
+  dplyr::ungroup()%>%
+  dplyr::mutate(meanSvWtage =  select(., tail(names(.), 2)) %>% 
+                         pmap(~ mean(c(...))) %>% unlist()) %>%
+  dplyr::mutate(Wtage = ifelse(is.na(Wtage), meanSvWtage, Wtage)) %>%
   dplyr::mutate(wtagesamp_g = Wtage*Natage) %>%
   dplyr::group_by(ModSim, year, Code, Name, fishery) %>%
   dplyr::mutate(sumsamp_g = sum(wtagesamp_g),
@@ -435,14 +443,17 @@ fishCAAest <- fishwtagesamp %>%
 # but it is all years
 # fishCAAest %>% filter(is.na(Wtage)) %>% ungroup() %>% select(year) %>% distinct()
 
-fishCAAestfix <- fishCAAest %>%
-  dplyr::filter(is.na(Wtage)) %>%
-  dplyr::left_join(mskeyrun::simSurveyWtatAge) %>%
-  dplyr::select(-units) %>%
-  tidyr::pivot_wider(names_from = c("survey", "variable"), values_from = "value") %>%
-  dplyr::ungroup()%>%
-  dplyr::mutate(meanSvWtage =  select(., tail(names(.), 2)) %>% 
-                         pmap(~ mean(c(...))) %>% unlist())
+# # this works so integrating above
+# fishCAAestfix <- fishCAAest %>%
+#   dplyr::filter(is.na(Wtage)) %>%
+#   dplyr::left_join(mskeyrun::simSurveyWtatAge) %>%
+#   dplyr::select(-units) %>%
+#   tidyr::pivot_wider(names_from = c("survey", "variable"), values_from = "value") %>%
+#   dplyr::ungroup()%>%
+#   dplyr::mutate(meanSvWtage =  select(., tail(names(.), 2)) %>% 
+#                          pmap(~ mean(c(...))) %>% unlist()) %>%
+#   dplyr::mutate(Wtage = meanSvWtage,
+#                 wtagesamp_g = Wtage*Natage)
 
 # sum sampled weight
 # catch numbers at age (millions)
